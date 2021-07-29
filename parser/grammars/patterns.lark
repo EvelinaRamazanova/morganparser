@@ -1,0 +1,36 @@
+// JAICP pattern grammar
+// is currently able to parse q-patterns only
+
+pattern: _ASTERISK? (_group | _token )* _ASTERISK?
+    
+_group: optional | alternative | permutation
+
+optional: "[" _or_group "]"
+alternative: "(" _or_group ")"
+permutation: "{" _or_group "}"
+    
+_or_group: ((_token+ | _group) "/"?)+
+    
+_token: RUWORD+ | NAMED | stem | morph | regexp |testquery | state_modifier
+
+stem: RUWORD "*" | "*" RUWORD | "*" RUWORD "*"
+morph: _TILDA RUWORD
+negation: _NEG RUWORD
+regexp.2: _REGEX /<.*?>/
+
+testquery: TESTQUERY
+
+NAMED: "$" /[a-zA-Z0-9]+/
+RUWORD: /[а-яА-ЯёЁ0-9-]+/
+
+TESTQUERY: /[Tt]est.*/
+_TILDA: "~"
+_ASTERISK: /(?!<=[\}\)\]])\*/
+_NEG: "^"
+_REGEX.2: "$regexp" 
+
+_WS: " "
+
+%import .sc_main.state_modifier
+%ignore _ASTERISK
+%ignore _WS

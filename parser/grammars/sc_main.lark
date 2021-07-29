@@ -1,0 +1,89 @@
+// Basic JACP scenario grammar, WIP
+// Is generally able to parse a query state
+//
+// Patterns and scrips are extracted as strings to be parsed with patterns.lark and javascript.lark
+// No answer parsing for functions and templates - do it separately
+//
+//TODO: FIX children in regular conditionals
+//
+start: patterns? theme 
+
+theme: _NL? _THEME theme_name _NL [_INDENT state* _DEDENT]
+
+state: _STATE state_name state_modifier* _NL state_body
+react_state: _STATE  react_state_name state_modifier* _NL state_body
+
+state_body: _INDENT [action 
+                    |conditional
+                    |pattern 
+                    |ex
+                    //|random
+                    //|buttons
+                    |react_state]* _DEDENT
+
+react_state_name: "react" HNAME
+state_name: HNAME "?"?
+state_modifier:   /\|\| modal ?\= ?true/ -> modal 
+                | /\|\| noContext ?= ?true/ -> nocontext
+                | /\|\| onlyThisState ?= ?true/ -> onlythis
+
+theme_name: HNAME
+
+ex: _EX STRING _NL
+
+buttons: "buttons:" _NL _INDENT (STRING _NL)+ _DEDENT
+
+
+//Actions
+?action: script | random | buttons | transition | answer
+transition: _TRANSITION (state_name | template_var) _NL
+answer: _A STRING _NL 
+
+random: _RANDOM _NL _INDENT action* _DEDENT
+
+// Regular conditionals and native expressions
+conditional: "if:" expression_sequence option ("elseif:" expression_sequence option)* ("else:" option)?
+?option: _NL* [_INDENT [action | conditional]* _DEDENT]
+
+// Patterns
+?pattern: qpattern _NL
+qpattern: _Q STRING 
+
+//patterns: _PATTERNS _NL+ _INDENT [STRING _NL _INDENT?]* _DEDENT+
+patterns: _PATTERNS _NL _INDENT (STRING _NL+)+ _DEDENT
+
+// Scripts
+script: _SCRIPT _NL _INDENT (STRING _NL+)+ _DEDENT
+
+template_var: "{{" single_expression "}}"
+
+// Signature terminals
+_THEME: "theme:"
+_STATE: "state:"
+_PATTERNS: "patterns:"
+_RANDOM: "random:"
+
+_EX: /# ?4(EX|BT|PT).*?:/
+_Q: /q!?:/
+_TRANSITION: /go!?:/
+_A: "a:"
+_SCRIPT: "script:" 
+
+HNAME: ("/"? NAME)+     // pathlike name for states and themes
+
+COMMENT: /#(?! ?4(EX|BT|PT))[^\n]*/
+_NEWLINE: /\r?\n[\t ]*/
+_NL: ( _NEWLINE | COMMENT)+
+
+// Primitives
+STRING: /.+/
+NAME: /[a-zA-Z0-9_]+/
+
+
+%import common.WS_INLINE
+%import .javascript.expression_sequence 
+%import .javascript.single_expression 
+
+%ignore WS_INLINE
+%ignore COMMENT
+%declare _INDENT _DEDENT
